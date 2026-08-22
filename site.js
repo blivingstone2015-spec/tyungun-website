@@ -18,6 +18,74 @@
     '@media (max-width:900px){.site-header{align-items:flex-start;flex-wrap:wrap;row-gap:12px;padding-block:14px;}.brand b{font-size:22px;}.brand span{font-size:9px;letter-spacing:.26em;}.nav{width:100%;justify-content:space-between;gap:10px 14px;flex-wrap:wrap;}.nav a{font-size:11px;letter-spacing:.1em;padding-block:4px;}.nav .btn{padding:9px 14px;font-size:11px;}}';
   document.head.appendChild(globalHeaderSizing);
 
+  function mapCloudinaryUrlToLocal(url) {
+    var value = String(url || '');
+    if (!/hipcamp-res\.cloudinary\.com/i.test(value)) return '';
+    var lower = value.toLowerCase();
+
+    if (lower.indexOf('pine-chapel') >= 0 || lower.indexOf('mjcumorf') >= 0 || lower.indexOf('zecakdx') >= 0 || lower.indexOf('v0r8dhq') >= 0) {
+      return 'gallery-images/photo-04.jpg';
+    }
+    if (lower.indexOf('silky-oak') >= 0 || lower.indexOf('ixzl6') >= 0 || lower.indexOf('j5u6tb') >= 0 || lower.indexOf('ybf415') >= 0) {
+      return 'gallery-images/photo-07.jpg';
+    }
+    if (lower.indexOf('david-s-dell') >= 0 || lower.indexOf('po2j7g') >= 0 || lower.indexOf('ujyfuu') >= 0 || lower.indexOf('oxgjl9') >= 0) {
+      return 'gallery-images/photo-01.jpg';
+    }
+    if (lower.indexOf('twin-pines') >= 0 || lower.indexOf('ehqgie') >= 0 || lower.indexOf('r4gtn7') >= 0 || lower.indexOf('uwcpkw') >= 0) {
+      return 'gallery-images/photo-13.jpg';
+    }
+    if (lower.indexOf('swimming-hole') >= 0 || lower.indexOf('vhqojb') >= 0 || lower.indexOf('l66lmm') >= 0 || lower.indexOf('nemvhc') >= 0 || lower.indexOf('a2qjxc') >= 0 || lower.indexOf('t3wdhu') >= 0 || lower.indexOf('viiest') >= 0 || lower.indexOf('fhujfx') >= 0) {
+      return 'gallery-images/photo-10.jpg';
+    }
+    if (lower.indexOf('profile/') >= 0) {
+      return 'gallery-images/photo-01.jpg';
+    }
+
+    return 'gallery-images/photo-11.jpg';
+  }
+
+  function localizeCloudinaryMedia() {
+    var mediaNodes = document.querySelectorAll('img[src], source[src], [data-full], img[srcset], source[srcset]');
+
+    mediaNodes.forEach(function (node) {
+      if (node.hasAttribute('src')) {
+        var originalSrc = node.getAttribute('src') || '';
+        var localSrc = mapCloudinaryUrlToLocal(originalSrc);
+        if (localSrc) {
+          node.setAttribute('src', localSrc);
+        }
+      }
+
+      if (node.hasAttribute('data-full')) {
+        var originalFull = node.getAttribute('data-full') || '';
+        var localFull = mapCloudinaryUrlToLocal(originalFull);
+        if (localFull) {
+          node.setAttribute('data-full', localFull);
+        }
+      }
+
+      if (node.hasAttribute('srcset')) {
+        var srcset = node.getAttribute('srcset') || '';
+        if (/hipcamp-res\.cloudinary\.com/i.test(srcset)) {
+          var rewritten = srcset.split(',').map(function (candidate) {
+            var item = candidate.trim();
+            if (!item) return item;
+            var parts = item.split(/\s+/);
+            var url = parts[0] || '';
+            var descriptor = parts.slice(1).join(' ');
+            var localUrl = mapCloudinaryUrlToLocal(url);
+            if (!localUrl) return item;
+            return descriptor ? (localUrl + ' ' + descriptor) : localUrl;
+          }).join(', ');
+          node.setAttribute('srcset', rewritten);
+        }
+      }
+    });
+  }
+
+  localizeCloudinaryMedia();
+
   var NAV = [
     { key: 'sites',   href: 'sites.html',   label: 'The Sites' },
     { key: 'gallery', href: 'gallery.html', label: 'Gallery' },
@@ -136,24 +204,10 @@
   }
 
   function hasAdminEditAccess() {
-    var isFileProtocol = location.protocol === 'file:';
     var isLocalHost = /^(localhost|127\.0\.0\.1)$/i.test(location.hostname || '');
-    var flagEnabled = false;
 
-    try {
-      var params = new URLSearchParams(location.search || '');
-      var editParam = params.get('edit');
-      if (editParam === '1') {
-        setAdminEditAccess(true);
-      } else if (editParam === '0') {
-        setAdminEditAccess(false);
-      }
-      flagEnabled = localStorage.getItem(ADMIN_EDIT_FLAG_KEY) === '1';
-    } catch (e) {
-      flagEnabled = false;
-    }
-
-    return isFileProtocol || isLocalHost || flagEnabled;
+    // Keep authoring deterministic: edit mode is only enabled in localhost workspace mode.
+    return isLocalHost;
   }
 
   /* ---------- Inline edit mode ---------- */
@@ -196,12 +250,17 @@
     var SITE_CARD_REF_PREFIX = 'sitecard:';
     var SITE_CARD_IMAGES_KEY = 'tyungun-sites-card-images:v1';
     var IMAGE_PREVIEW_KEY = storageKey + '::image-previews';
+    var STORAGE_META_KEY = storageKey + '::meta';
+    var EDITOR_STATE_FILE = 'editor-state/' + stablePageKey + '.json';
+    var EDITOR_STATE_API = '/__editor/state?page=' + encodeURIComponent(stablePageKey);
+    var FILE_PERSIST_DEBOUNCE_MS = 350;
     var EDITABLE_MEDIA_SELECTOR = '.sblock__media,.g-tile,.gallery__tile,.other-card,.other-card__media,.host-row__media,.breg,.breg__media,.crow,.crow__peek,.cland__media,.bplate__media,.carousel-stage,.hero__media,.page-hero__media,.chero__media,.bhero__media,.land-strip__media,.land-night__media,.ph';
     var BANNER_MEDIA_SELECTOR = '.hero,.hero__media,.page-hero,.page-hero__media,.hero-banner,.site-hero,.masthead,.land-strip,.land-strip__media,.chero,.chero__media,.bhero,.bhero__media,.cland,.cland__media,.bplate,.bplate__media,.land-night,.land-night__media';
     var NON_EDITABLE_CONTAINER_SELECTOR = PAGE === 'gallery'
       ? 'header,footer,nav,.mobile-menu,.site-header,.site-footer,.dir-switch,.gallery-manager,.masonry,.gallery,.camps-map__canvas,.camps-map__leaflet,.leaflet-container,.leaflet-pane,.leaflet-control-container,.leaflet-popup-pane,.leaflet-marker-pane,.leaflet-shadow-pane,.leaflet-tooltip-pane,.leaflet-tile-pane'
       : 'header,footer,nav,.mobile-menu,.site-header,.site-footer,.dir-switch,.gallery-manager,.masonry,.camps-map__canvas,.camps-map__leaflet,.leaflet-container,.leaflet-pane,.leaflet-control-container,.leaflet-popup-pane,.leaflet-marker-pane,.leaflet-shadow-pane,.leaflet-tooltip-pane,.leaflet-tile-pane';
     var imageObjectUrls = new Map();
+    var filePersistTimer = null;
 
     var fileInput = document.createElement('input');
     fileInput.type = 'file';
@@ -377,6 +436,7 @@
     function persistSiteCardImageMap(map) {
       try {
         localStorage.setItem(SITE_CARD_IMAGES_KEY, JSON.stringify(map || {}));
+        schedulePersistSavedEditsToFile();
         return true;
       } catch (e) {
         return false;
@@ -411,6 +471,7 @@
     function persistImagePreviewMap(map) {
       try {
         localStorage.setItem(IMAGE_PREVIEW_KEY, JSON.stringify(map || {}));
+        schedulePersistSavedEditsToFile();
         return true;
       } catch (e) {
         return false;
@@ -464,6 +525,179 @@
     function markBannerImagesReady() {
       document.documentElement.classList.remove('ty-prehide-banner');
       document.documentElement.classList.add('ty-banner-ready');
+    }
+
+    function canPersistEditsToWorkspace() {
+      var protocol = String(location.protocol || '').toLowerCase();
+      if (protocol !== 'http:' && protocol !== 'https:') return false;
+      var host = String(location.hostname || '').toLowerCase();
+      return host === 'localhost' || host === '127.0.0.1';
+    }
+
+    function normalizeSavedEditsShape(candidate) {
+      var parsed = candidate;
+      if (!parsed || typeof parsed !== 'object') parsed = { text: {}, images: {}, deleted: {} };
+      if (!parsed.text || typeof parsed.text !== 'object') parsed.text = {};
+      if (!parsed.images || typeof parsed.images !== 'object') parsed.images = {};
+      if (!parsed.deleted || typeof parsed.deleted !== 'object') parsed.deleted = {};
+      return parsed;
+    }
+
+    function normalizeStringMap(map) {
+      if (!map || typeof map !== 'object') return {};
+      var next = {};
+      Object.keys(map).forEach(function (key) {
+        if (typeof map[key] === 'string') next[key] = map[key];
+      });
+      return next;
+    }
+
+    function parseIsoTime(value) {
+      if (!value) return 0;
+      var ts = Date.parse(String(value));
+      return Number.isFinite(ts) ? ts : 0;
+    }
+
+    function hasSavedEditsContent(candidate) {
+      var normalized = normalizeSavedEditsShape(candidate);
+      return Object.keys(normalized.text).length > 0 ||
+        Object.keys(normalized.images).length > 0 ||
+        Object.keys(normalized.deleted).length > 0;
+    }
+
+    function hasEditorStateContent(payload) {
+      if (!payload || typeof payload !== 'object') return false;
+      if (hasSavedEditsContent(payload.savedEdits || payload.edits || null)) return true;
+      if (Object.keys(normalizeStringMap(payload.imagePreviews)).length > 0) return true;
+      if (Object.keys(normalizeStringMap(payload.siteCardImages)).length > 0) return true;
+      return false;
+    }
+
+    function loadLocalMeta() {
+      try {
+        var raw = localStorage.getItem(STORAGE_META_KEY);
+        var parsed = raw ? JSON.parse(raw) : null;
+        if (!parsed || typeof parsed !== 'object') return null;
+        return parsed;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function writeLocalMeta(updatedAt) {
+      try {
+        localStorage.setItem(STORAGE_META_KEY, JSON.stringify({ updatedAt: updatedAt || new Date().toISOString() }));
+      } catch (e) {}
+    }
+
+    function buildLocalStateSnapshot() {
+      return {
+        savedEdits: normalizeSavedEditsShape(savedEdits),
+        imagePreviews: normalizeStringMap(loadImagePreviewMap()),
+        siteCardImages: normalizeStringMap(loadSiteCardImageMap()),
+        updatedAt: (loadLocalMeta() || {}).updatedAt || ''
+      };
+    }
+
+    function shouldApplyWorkspacePayload(payload) {
+      if (!payload || typeof payload !== 'object') return false;
+
+      var localSnapshot = buildLocalStateSnapshot();
+      var hasWorkspaceContent = hasEditorStateContent(payload);
+      var hasLocalContent = hasEditorStateContent(localSnapshot);
+
+      if (!hasLocalContent && hasWorkspaceContent) return true;
+      if (hasLocalContent && !hasWorkspaceContent) return false;
+      if (!hasLocalContent && !hasWorkspaceContent) return true;
+
+      var workspaceTs = parseIsoTime(payload.updatedAt);
+      var localTs = parseIsoTime(localSnapshot.updatedAt);
+
+      if (workspaceTs && localTs) return workspaceTs >= localTs;
+      if (workspaceTs && !localTs) return false;
+      if (!workspaceTs && localTs) return false;
+
+      try {
+        var workspaceFingerprint = JSON.stringify({
+          savedEdits: normalizeSavedEditsShape(payload.savedEdits || payload.edits || null),
+          imagePreviews: normalizeStringMap(payload.imagePreviews),
+          siteCardImages: normalizeStringMap(payload.siteCardImages)
+        });
+        var localFingerprint = JSON.stringify({
+          savedEdits: localSnapshot.savedEdits,
+          imagePreviews: localSnapshot.imagePreviews,
+          siteCardImages: localSnapshot.siteCardImages
+        });
+        return workspaceFingerprint === localFingerprint;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    function loadEditorStatePayloadFromPath(path) {
+      return fetch(path, { cache: 'no-store' }).then(function (response) {
+        if (!response.ok) return null;
+        return response.json().catch(function () { return null; });
+      }).catch(function () {
+        return null;
+      });
+    }
+
+    function loadEditorStatePayload() {
+      var stateFilePath = EDITOR_STATE_FILE + '?v=' + Date.now();
+      if (canPersistEditsToWorkspace()) {
+        return loadEditorStatePayloadFromPath(EDITOR_STATE_API).then(function (payload) {
+          if (payload && typeof payload === 'object') return payload;
+          return loadEditorStatePayloadFromPath(stateFilePath);
+        });
+      }
+      return loadEditorStatePayloadFromPath(stateFilePath);
+    }
+
+    function buildEditorStatePayload() {
+      return {
+        version: 1,
+        page: stablePageKey,
+        updatedAt: new Date().toISOString(),
+        savedEdits: normalizeSavedEditsShape(savedEdits),
+        imagePreviews: normalizeStringMap(loadImagePreviewMap()),
+        siteCardImages: normalizeStringMap(loadSiteCardImageMap())
+      };
+    }
+
+    function applyEditorStatePayload(payload) {
+      if (!payload || typeof payload !== 'object') return false;
+      savedEdits = normalizeSavedEditsShape(payload.savedEdits || payload.edits || null);
+      try { localStorage.setItem(IMAGE_PREVIEW_KEY, JSON.stringify(normalizeStringMap(payload.imagePreviews))); } catch (e) {}
+      try { localStorage.setItem(SITE_CARD_IMAGES_KEY, JSON.stringify(normalizeStringMap(payload.siteCardImages))); } catch (e) {}
+      persistSavedEdits(false);
+      writeLocalMeta(payload.updatedAt || '');
+      return true;
+    }
+
+    function persistSavedEditsToFileNow() {
+      if (!canPersistEditsToWorkspace()) return;
+      fetch(EDITOR_STATE_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(buildEditorStatePayload())
+      }).catch(function () {});
+    }
+
+    function schedulePersistSavedEditsToFile() {
+      if (!canPersistEditsToWorkspace()) return;
+      if (filePersistTimer !== null) {
+        clearTimeout(filePersistTimer);
+      }
+      filePersistTimer = window.setTimeout(function () {
+        filePersistTimer = null;
+        persistSavedEditsToFileNow();
+      }, FILE_PERSIST_DEBOUNCE_MS);
+    }
+
+    function deletePersistedEditorStateFile() {
+      if (!canPersistEditsToWorkspace()) return;
+      fetch(EDITOR_STATE_API, { method: 'DELETE' }).catch(function () {});
     }
 
     function loadSavedEdits() {
@@ -521,12 +755,13 @@
       });
     }
 
-    var savedEdits = loadSavedEdits();
+    var savedEdits = { text: {}, images: {}, deleted: {} };
 
-    function persistSavedEdits() {
+    function persistSavedEdits(updateMeta) {
       try {
         var serialized = JSON.stringify(savedEdits);
         localStorage.setItem(storageKey, serialized);
+        if (updateMeta !== false) writeLocalMeta();
         return true;
       } catch (e) {
         return false;
@@ -544,10 +779,12 @@
     function persistSavedEditsReliable() {
       if (persistSavedEdits()) {
         persistSavedEditsToDb();
+        schedulePersistSavedEditsToFile();
         return true;
       }
       if (!window.indexedDB) return false;
       persistSavedEditsToDb();
+      schedulePersistSavedEditsToFile();
       return true;
     }
 
@@ -567,9 +804,11 @@
       if (legacyStorageKey !== storageKey) localStorage.removeItem(legacyStorageKey);
       localStorage.removeItem(SITE_CARD_IMAGES_KEY);
       localStorage.removeItem(IMAGE_PREVIEW_KEY);
+      localStorage.removeItem(STORAGE_META_KEY);
       if (legacyStorageKey !== storageKey) localStorage.removeItem(legacyStorageKey + '::image-previews');
       imageObjectUrls.forEach(function (url) { URL.revokeObjectURL(url); });
       imageObjectUrls.clear();
+      deletePersistedEditorStateFile();
 
       openImageDb().then(function (db) {
         if (!db) return;
@@ -1169,6 +1408,7 @@
           // Keep text edits recoverable even if localStorage is at quota.
           persistSavedEdits();
           persistSavedEditsToDb();
+          schedulePersistSavedEditsToFile();
         }
 
         node.addEventListener('input', saveTextEdit);
@@ -1314,6 +1554,7 @@
             removeSiteCardImage(key.slice(3));
           }
           persistSavedEdits();
+          schedulePersistSavedEditsToFile();
         }
         activeDeleteTarget.remove();
         hideDeleteFab();
@@ -1377,13 +1618,32 @@
       }
     });
 
+    savedEdits = loadSavedEdits();
     applySavedEdits();
     markBannerImagesReady();
-    loadSavedEditsFromDb().then(function (loaded) {
-      if (!loaded) return;
-      savedEdits = loaded;
+
+    loadSavedEditsFromDb().then(function (dbEdits) {
+      if (hasSavedEditsContent(savedEdits)) return;
+      if (!hasSavedEditsContent(dbEdits)) return;
+      savedEdits = normalizeSavedEditsShape(dbEdits);
+      persistSavedEdits(false);
+      writeLocalMeta();
       applySavedEdits();
       markBannerImagesReady();
+    });
+
+    loadEditorStatePayload().then(function (fileLoaded) {
+      if (!fileLoaded) return;
+
+      if (shouldApplyWorkspacePayload(fileLoaded)) {
+        if (!applyEditorStatePayload(fileLoaded)) return;
+        applySavedEdits();
+        markBannerImagesReady();
+        return;
+      }
+
+      // Local edits are newer than workspace state; sync them back to disk.
+      schedulePersistSavedEditsToFile();
     });
     attachEditListeners();
     attachImageEditListeners();
