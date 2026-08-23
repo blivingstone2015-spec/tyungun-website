@@ -145,7 +145,14 @@
         '<span>Ferny Glen &middot; QLD &middot; AU</span>' +
       '</div>' +
     '</div>';
-  document.body.appendChild(footer);
+  var existingFooters = document.querySelectorAll('footer.site-footer');
+  if (existingFooters.length) {
+    for (var footerIndex = 1; footerIndex < existingFooters.length; footerIndex += 1) {
+      existingFooters[footerIndex].remove();
+    }
+  } else {
+    document.body.appendChild(footer);
+  }
 
   /* ---------- Reveal on scroll ---------- */
   var io = new IntersectionObserver(function (entries) {
