@@ -1,0 +1,136 @@
+Tyungun Country Retreat Gallery Diagnostic Report
+Date: 2026-08-20
+Workspace: CampingWebsite
+
+SUMMARY
+
+The gallery data is complete. All 35 gallery records reach the runtime `photos` array, all referenced image files exist, and there are no JavaScript errors or broken image paths.
+
+The missing-photo behaviour is caused by the gallery initially rendering only 8 records and delaying subsequent batches until the viewport is near the bottom of the entire document. Repeated baked runtime markup has produced multiple headers, footers, and gallery viewers. The duplicated footers place the true document bottom well below the gallery, so reaching the end of the visible gallery does not satisfy the load-more threshold.
+
+DATA SOURCES AND RECORD COUNTS
+
+Files inspected:
+- gallery_photos.json
+- gallery_photos.js
+- editor-state/gallery-photos.json
+- gallery-images/
+- gallery.html
+- editor-server.js
+
+Verified counts:
+- gallery_photos.json records: 35
+- gallery_photos.js manifest records: 35
+- editor-state/gallery-photos.json records: 35
+- Local API /__editor/gallery records: 35
+- Unique gallery record paths: 35
+- Referenced paths that exist on disk: 35
+- Total files currently in gallery-images/: 50
+- Duplicate gallery paths: 0
+- Pathless records rejected by sanitization: 0
+
+The JSON file, JavaScript manifest, and editor-state API contain the same 35-photo dataset. The ordered paths in gallery_photos.json and gallery_photos.js match.
+
+WHERE `photos` IS POPULATED
+
+File: gallery.html
+
+- Line 10 loads gallery_photos.js, which defines window.TYUNGUN_GALLERY_PHOTOS.
+- Line 429: loadManifestPhotos() reads window.TYUNGUN_GALLERY_PHOTOS.
+- Line 447: loadStoredPhotos() selects the data source.
+  - On localhost, it prefers /__editor/gallery.
+  - It then sanitizes and deduplicates workspace records and manifest records.
+  - Outside localhost, it uses the shipped JavaScript manifest.
+- Line 690: bootstrapPhotos() assigns the loaded records to the `photos` array, migrates any legacy records, and hydrates upload blobs when required.
+- Line 1160 invokes bootstrapPhotos() before calling renderMasonry().
+
+Runtime evidence that `photos` contains all 35 records:
+- window.TYUNGUN_GALLERY_PHOTOS.length was 35.
+- /__editor/gallery returned 35 records.
+- Opening the runtime gallery viewer displayed "1 / 35", proving the viewer was reading a 35-record `photos` array.
+
+RENDERING LOGIC
+
+File: gallery.html
+
+- INITIAL_GALLERY_BATCH is 8.
+- LOAD_MORE_GALLERY_BATCH is 12.
+- Line 905: renderGalleryPhotoBatch(startIndex, endIndex) loops through every requested index and appends one article and image for each existing photo.
+- Line 935: renderMasonry() clears the masonry container and initially renders 8 records.
+- Line 954: loadMoreMasonryPhotos() calculates and renders subsequent batches.
+- Line 959 contains the viewport gate:
+
+  if (viewportBottom < pageHeight - threshold) return;
+
+- Line 973: scheduleLoadMoreMasonryPhotos() uses requestAnimationFrame().
+- Line 1164 attaches the scroll listener.
+- Line 1165 attaches the resize listener.
+
+There is no off-by-one error or loop defect in renderGalleryPhotoBatch(). A live runtime test proved it can render all 35 records.
+
+LIVE RUNTIME RESULTS
+
+Page tested:
+http://127.0.0.1:5500/gallery.html
+
+Initial state after bootstrap:
+- Runtime photo records: 35
+- Gallery tile elements rendered: 8
+- Gallery image elements rendered: 8
+- Broken images: 0
+
+At the end of the visible gallery:
+- Gallery tiles remained at 8.
+- viewportBottom was approximately 2516 px.
+- pageHeight was approximately 4781 px.
+- pageHeight minus the minimum 900 px threshold was approximately 3881 px.
+- Since 2516 was less than 3881, the early return at gallery.html line 959 prevented the next batch.
+
+After scrolling to the true bottom of the entire document in an active browser tab:
+- Gallery tile elements increased from 8 to 35.
+- Gallery image elements increased from 8 to 35.
+
+After scrolling back to the gallery section:
+- Positive-size gallery tiles: 35
+- Successfully loaded gallery images: 35
+- Broken gallery images: 0
+
+This proves all records can render and that the viewport trigger, rather than missing data, prevents them from appearing during normal gallery browsing.
+
+CSS AND DOM FINDINGS
+
+File: gallery.html
+
+- Line 77 defines masonry items with display:block.
+- No CSS rule was found that globally hides .masonry-item or .gallery__tile with display:none, visibility:hidden, or opacity:0.
+- The controls overlay has opacity:0 outside edit mode, but this does not hide the photo tile itself.
+- Gallery images use loading="lazy" and have no fixed intrinsic dimensions. Newly appended images can temporarily produce zero-height tiles until the browser approaches the gallery and loads them.
+
+Duplicated baked markup was found:
+- Static gallery.html contains 3 header occurrences.
+- Static gallery.html contains 3 footer occurrences.
+- Static gallery.html contains 3 gallery viewer occurrences.
+- At runtime, site.js adds another header and footer and the gallery script creates another viewer.
+- Runtime totals observed: 4 headers, 4 footers, and 4 gallery viewers.
+- The repeated footer/viewer markup is concentrated around gallery.html line 1172.
+- Repeated header markup is present around gallery.html line 91.
+
+The duplicated footers materially increase document height below the gallery. This makes the document-bottom threshold unsuitable for deciding when to load more gallery records.
+
+JAVASCRIPT AND LOADING ERRORS
+
+- Browser page errors: none.
+- Browser console JavaScript errors during the diagnostic navigation: none.
+- gallery_photos.js request: HTTP 200.
+- gallery.html request: HTTP 200.
+- /__editor/gallery request: successful, 35 records.
+- Broken gallery images after loading: 0.
+- Missing referenced image files: 0.
+
+A requestAnimationFrame-based scheduler may be delayed or suspended while a browser tab is backgrounded. In an active tab, scrolling to the true document bottom successfully caused all 35 records to be rendered.
+
+MOST LIKELY EXPLANATION
+
+The gallery is not losing records. It intentionally renders only 8 initially, then waits until the viewport is close to the bottom of the entire document. Because repeated hard bakes have embedded duplicate footers and other runtime-generated markup, the actual document bottom is far below the gallery. A visitor reaching the end of the visible photos does not reach the threshold checked at gallery.html line 959, so the next batches are not requested.
+
+When the true document bottom was reached in testing, the DOM immediately expanded from 8 gallery records to all 35. Returning to the gallery loaded all 35 images successfully. This is direct runtime proof that the missing photos are caused by the load trigger and duplicated document structure, not by gallery_photos.json, missing files, CSS hiding, render-loop failure, or JavaScript exceptions.
