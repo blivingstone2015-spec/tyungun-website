@@ -177,24 +177,6 @@
     });
   }
 
-  /* ---------- Homepage direction switcher (A / B / C) ---------- */
-  if (PAGE === 'home') {
-    var file = (location.pathname.split('/').pop() || 'index.html');
-    var dirs = [
-      { f: 'index.html',   k: 'A', t: 'Editorial' },
-      { f: 'index-b.html', k: 'B', t: 'Almanac' },
-      { f: 'index-c.html', k: 'C', t: 'Field Study' }
-    ];
-    var sw = document.createElement('div');
-    sw.className = 'dir-switch';
-    sw.innerHTML = '<span class="dir-switch__lbl">Direction</span>' +
-      dirs.map(function (d) {
-        var on = (file === d.f || (file === '' && d.f === 'index.html'));
-        return '<a href="' + d.f + '" title="' + d.t + '"' + (on ? ' class="on"' : '') + '>' + d.k + '</a>';
-      }).join('');
-    document.body.appendChild(sw);
-  }
-
   var ADMIN_EDIT_FLAG_KEY = 'tyungun-admin-edit-enabled:v1';
 
   function setAdminEditAccess(enabled) {
