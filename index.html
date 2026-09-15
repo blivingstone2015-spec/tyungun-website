@@ -206,6 +206,19 @@
   </div>
 </section>
 
+<!-- WHERE -->
+<section class="section--tight dark">
+  <div class="wrap">
+    <div class="section-label" data-reveal=""><span class="numtag" style="color:var(--clay);">◊</span><h2 class="h-md" style="color:var(--paper);">Close to everything. Far from it all.</h2></div>
+    <div class="where-grid">
+      <div class="where" data-reveal=""><b>15 min</b><span>Canungra — coffee, fuel &amp; provisions</span></div>
+      <div class="where" data-reveal="" data-reveal-delay="1"><b>40 min</b><span>The Gold Coast &amp; its beaches</span></div>
+      <div class="where" data-reveal="" data-reveal-delay="2"><b>60 min</b><span>Brisbane</span></div>
+    </div>
+    <p class="lead" style="max-width:54ch; margin-top:48px;">A handy base — far enough to feel away, close enough not to be stuck. The precise address is shared once your stay is confirmed.</p>
+  </div>
+</section>
+
 <!-- ============================ REVIEW ============================ -->
 <section class="section quote-sec review-carousel-sec">
   <div class="wrap--narrow wrap" data-reveal="" data-review-carousel="">
@@ -255,6 +268,14 @@
 </section>
 
 <style>
+/* ---- where ---- */
+.where-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:28px; }
+.where b{ display:block; font-family:var(--ff-display); font-size:clamp(34px,4vw,52px); color:var(--clay); }
+.where span{ font-family:var(--ff-mono); font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:#cabea4; display:block; margin-top:10px; }
+@media (max-width:900px){
+  .where-grid{ grid-template-columns:1fr; gap:28px; }
+}
+
 /* ---- hero ---- */
 .hero{ position:relative; height:100svh; min-height:620px; display:flex; flex-direction:column; justify-content:flex-end; color:var(--paper); overflow:hidden; }
 .hero__media{ position:absolute; inset:0; }
