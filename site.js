@@ -2,6 +2,16 @@
    Tyungun Country Retreat — shared chrome + interactions
    =========================================================== */
 (function () {
+  // Google Analytics 4
+  window.dataLayer = window.dataLayer || [];
+  window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
+  window.gtag('js', new Date());
+  window.gtag('config', 'G-P39WTCDXZ8');
+  var gtagScript = document.createElement('script');
+  gtagScript.async = true;
+  gtagScript.src = 'https://www.googletagmanager.com/gtag/js?id=G-P39WTCDXZ8';
+  document.head.appendChild(gtagScript);
+
   var PAGE = document.body.getAttribute('data-page') || '';
   var HOME = document.body.getAttribute('data-home') || 'index.html';
 
